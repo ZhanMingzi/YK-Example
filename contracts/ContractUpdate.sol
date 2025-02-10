@@ -18,7 +18,7 @@ contract implementationContract is storageStructureContract{
         _;
     }
 
-    function addPlayer(address player,uint points) public onlyOwner {
+    function addPlayer(address player,uint points) public virtual  onlyOwner {
         require(point[player] == 0,'player already exists');
         point[player] = points;
     }
@@ -49,7 +49,28 @@ contract proxyContract is storageStructureContract{
     }
 
     fallback() external payable {
-        
+        address impl = implementation;
+        assembly{
+            let ptr := mload(0x40)
+            calldatacopy(ptr,0,calldatasize())
+            let result := delegatecall(gas(),impl,ptr,calldatasize(),0,0)
+            let size := returndatasize()
+
+            returndatacopy(ptr,0,size)
+
+            switch result
+                case 0 { revert(ptr,size) }
+                default { return(ptr,size) } 
+        }
     }
 
+}
+
+contract implementationContractV2 is implementationContract {
+
+    function addPlayer(address player, uint points) public onlyOwner override {
+        require(point[player] == 0,'player already exists');
+        point[player] = points;
+        totalPlayers ++;
+    }
 }
